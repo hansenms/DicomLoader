@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Using v1.2.2 of Azure.Identity due to this bug: https://github.com/Azure/azure-sdk-for-net/issues/12939
+    -->
+    <PackageReference Include="Azure.Identity" Version="1.2.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.6.0" />
+    <PackageReference Include="Microsoft.Health.Dicom.Client" Version="1.0.0-master-20200928-2" />
+
+    <PackageReference Include="Polly" Version="7.2.1" />
+    <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20371.2" />
+  </ItemGroup>
+
+</Project>
