@@ -42,7 +42,7 @@ namespace DicomLoader
                             TimeSpan.FromMilliseconds(16000 + randomGenerator.Next(50)),
                     };
 
-            BlobContainerClient containerClient = new BlobContainerClient(blobContainerUrl, new DefaultAzureCredential());
+            BlobContainerClient containerClient = new BlobContainerClient(blobContainerUrl, new AzureCliCredential());
             var actionBlock = new ActionBlock<string>(async blobName =>
             {
 
