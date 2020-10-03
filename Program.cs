@@ -24,7 +24,7 @@ namespace DicomLoader
             int refreshInterval = 5)
         {
             HttpClient httpClient = new HttpClient();
-            
+
             var metrics = new MetricsCollector();
 
             var randomGenerator = new Random();
@@ -71,7 +71,7 @@ namespace DicomLoader
                         message.Content = new ByteArrayContent(fileContents);
                         message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/dicom");
 
-                        var res =  await httpClient.SendAsync(message);
+                        var res = await httpClient.SendAsync(message);
 
                         // We are ignoring conflicts...file already on server
                         if (res.StatusCode == System.Net.HttpStatusCode.Conflict)
@@ -101,7 +101,8 @@ namespace DicomLoader
             );
 
             // Start output on timer
-            var t = new Task( () => {
+            var t = new Task(() =>
+            {
                 while (true)
                 {
                     Thread.Sleep(1000 * refreshInterval);
