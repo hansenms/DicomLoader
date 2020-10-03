@@ -30,4 +30,4 @@ Options:
   -?, -h, --help                                             Show help and usage information
   ```
 
-> Note: This loader does **not support** authentication to the DICOM service (yet)
+> Note: This loader does **not support** authentication to the DICOM service (yet).
