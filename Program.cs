@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -8,8 +9,6 @@ using Azure;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Dicom;
-using Microsoft.Health.Dicom.Client;
 using Polly;
 
 namespace DicomLoader
@@ -25,9 +24,7 @@ namespace DicomLoader
             int refreshInterval = 5)
         {
             HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri(dicomServerUrl.AbsoluteUri);
-            DicomWebClient client = new DicomWebClient(httpClient);
-            
+
             var metrics = new MetricsCollector();
 
             var randomGenerator = new Random();
@@ -57,13 +54,11 @@ namespace DicomLoader
                     fileContents = br.ReadBytes((int)download.ContentLength);
                 }
 
-
-                DicomFile dicomFile = DicomFile.Open(new MemoryStream(fileContents));
-
-                DicomWebResponse uploadResult = await Policy
-                    .HandleResult<DicomWebResponse>(response => !IsSuccessStatusCode(response.StatusCode))
+                HttpResponseMessage uploadResult = await Policy
+                    .HandleResult<HttpResponseMessage>(response => !response.IsSuccessStatusCode)
                     .WaitAndRetryAsync(pollyDelays, (result, timeSpan, retryCount, context) =>
                     {
+
                         if (retryCount > 3)
                         {
                             Console.WriteLine($"Request failed with {result.Result.StatusCode}. Waiting {timeSpan} before next retry. Retry attempt {retryCount}");
@@ -71,21 +66,22 @@ namespace DicomLoader
                     })
                     .ExecuteAsync(async () =>
                     {
-                        try
+                        var message = new HttpRequestMessage(HttpMethod.Post, new Uri(dicomServerUrl, "/studies"));
+                        message.Headers.Add("Accept", "application/dicom+json");
+                        message.Content = new ByteArrayContent(fileContents);
+                        message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/dicom");
+
+                        var res = await httpClient.SendAsync(message);
+
+                        // We are ignoring conflicts...file already on server
+                        if (res.StatusCode == System.Net.HttpStatusCode.Conflict)
                         {
-                            return await client.StoreAsync(new[] { dicomFile });
+                            Console.WriteLine($"Ignoring conflict for file: {blobName}");
+                            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
                         }
-                        catch (DicomWebException e)
+                        else
                         {
-                            if (e.StatusCode == System.Net.HttpStatusCode.Conflict)
-                            {
-                                Console.WriteLine($"Conflict: {blobName}, skipping");
-                                return new DicomWebResponse(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
-                            }
-                            else
-                            {
-                                throw;
-                            }
+                            return res;
                         }
                     });
 
@@ -105,7 +101,8 @@ namespace DicomLoader
             );
 
             // Start output on timer
-            var t = new Task( () => {
+            var t = new Task(() =>
+            {
                 while (true)
                 {
                     Thread.Sleep(1000 * refreshInterval);
